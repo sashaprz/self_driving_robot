@@ -68,10 +68,10 @@ void loop() {
 
   // Calculate pitch angle
   // Define a constant for the maximum expected acceleration
-  const float GRAVITY = 9.81;  // Adjust this based on your observations
+  const float GRAVITY = 9.81; 
 
   // In your loop or wherever you calculate the tilt angle
-  float normalizedZ = calibratedZ / GRAVITY;
+  float normalizedZ = calibratedZ;
   float tiltAngle = atan2(-calibratedY, calibratedZ) * 180 / PI;
 
   // If you need to know the direction of tilt
