@@ -17,9 +17,9 @@ Servo leftwheel;
 Servo rightwheel; 
 
 // PID constants
-float Kp = 1;
-float Ki = 0.1;
-float Kd = 1;
+float Kp = 0.25;
+float Ki = 0.05;
+float Kd = 0.05;
 
 // PID variables
 float error = 0, prevError = 0, integral = 0, derivative = 0;
@@ -94,7 +94,7 @@ void loop() {
   output = constrain(output, -255, 255);
   
 // Print debug info
-  Serial.print(" Pitch: "); Serial.print(scaledTiltAngle);
+  //Serial.print(" Pitch: "); Serial.print(scaledTiltAngle);
   Serial.print(" Output: "); Serial.print(output);
   Serial.print("\n");
 
@@ -103,7 +103,7 @@ void loop() {
   
   prevError = error;
   
-  delay(10);  // Short delay for stability
+  delay(2);  // Short delay for stability
 }
 
 void calibrateADXL345() {
@@ -120,7 +120,7 @@ void calibrateADXL345() {
     sumY += event.acceleration.y;
     sumZ += event.acceleration.z;
     
-    delay(10);
+    delay(2);
   }
   
   offsetX = sumX / numSamples;
