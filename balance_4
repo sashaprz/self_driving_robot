@@ -3,110 +3,86 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
 
-Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
+// class name (from lib); instance name; constructor
+Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345); 
 
-// Calibration offsets
-float offsetX = 0, offsetY = 0, offsetZ = 0;
+//offset variables
+float offsetX; 
+float offsetY; 
+float offsetZ; 
 
-// Motor pins
-const int leftMotor = 9;   // Left motor PWM pin
-const int rightMotor = 10;  // Right motor PWM pin
+float calibratedX, calibratedY, calibratedZ; 
 
-//creating an object of the Servo class
-Servo leftwheel; 
 Servo rightwheel; 
+Servo leftwheel; 
 
-// PID constants
-float Kp = 0.25;
-float Ki = 0.05;
-float Kd = 0.05;
+const int leftpin = 9; 
+const int rightpin = 10; 
 
-// PID variables
+//PID constance
+float Kp = 0.3; 
+float Ki = 0.0; 
+float Kd = 0.25; 
+
+float targetAngle = 0.0; 
 float error = 0, prevError = 0, integral = 0, derivative = 0;
 
-// Target angle (0 degrees is balanced)
-float targetAngle = 0;
-
 void setup() {
-  Serial.begin(9600);
-  
-  if(!accel.begin()) {
-    Serial.println("No ADXL345 detected. Check wiring!");
+  Serial.begin(9600); 
+
+  if (!accel.begin()) {
+    Serial.println("No ADXL345 detected, check your wiring"); 
     while(1);
   }
-  
-  accel.setRange(ADXL345_RANGE_2_G);
-  
-  // Perform calibration
-  calibrateADXL345();
-  
-  Serial.println("Calibration complete!");
-  Serial.print("X offset: "); Serial.println(offsetX);
-  Serial.print("Y offset: "); Serial.println(offsetY);
-  Serial.print("Z offset: "); Serial.println(offsetZ);
 
-  // Set up motor pins
-  leftwheel.attach(leftMotor);
-  rightwheel.attach(rightMotor);
+  accel.setRange(ADXL345_RANGE_2_G); 
+
+  calibrate(); 
+  
+  Serial.print("X offset: "); Serial.println(offsetX); 
+  Serial.print("Y offset: "); Serial.println(offsetY); 
+  Serial.print("Z offset: "); Serial.println(offsetZ); 
+
+  leftwheel.attach(leftpin); 
+  rightwheel.attach(rightpin); 
+
 }
 
 void loop() {
   sensors_event_t event; 
   accel.getEvent(&event);
-  
-  // Apply calibration offsets
-  float calibratedX = event.acceleration.x - offsetX;
-  float calibratedY = event.acceleration.y - offsetY;
-  float calibratedZ = event.acceleration.z - offsetZ;
-  
-  Serial.print (" X = ");
-  Serial.print (calibratedX);
-  Serial.print (" Y = ");
-  Serial.print (calibratedY);
-  Serial.print (" Z = ");
-  Serial.print (calibratedZ);
 
-  // Calculate pitch angle
-  // Define a constant for the maximum expected acceleration
+  calibratedX = event.acceleration.x - offsetX; 
+  calibratedY = event.acceleration.y - offsetY; 
+  calibratedZ = event.acceleration.z - offsetZ; 
+
   const float GRAVITY = 9.81; 
-
-  // In your loop or wherever you calculate the tilt angle
   float normalizedZ = calibratedZ;
   float tiltAngle = atan2(-calibratedY, calibratedZ) * 180 / PI;
+ 
+  float scaledTiltAngle = tiltAngle;
 
-  // If you need to know the direction of tilt
-  //if (calibratedY < 0) {  // Assuming Y is positive when tilting forward
-  //    tiltAngle = -tiltAngle;
-  //}
-
-  // If you need to scale the angle back to represent actual tilt
-  float scaledTiltAngle = tiltAngle; //* (MAX_ACCELERATION / 9.81);
-  //using only z axis to calculate because y is affected by acceleration of the robot
+  float integralLimit = 20; // Adjust as needed
+  Ki = constrain(Ki, -integralLimit, integralLimit);
   
   // PID control
   error = scaledTiltAngle - targetAngle;
   integral += error;
   derivative = error - prevError;
-  
+
   float output = Kp * error + Ki * integral + Kd * derivative;
   
   // Constrain output to motor range
   output = constrain(output, -255, 255);
-  
-// Print debug info
-  //Serial.print(" Pitch: "); Serial.print(scaledTiltAngle);
-  Serial.print(" Output: "); Serial.print(output);
-  Serial.print("\n");
 
-  // Drive motors
-  driveMotors(output);
-  
-  prevError = error;
-  
-  delay(2);  // Short delay for stability
+  Serial.print("Output: "); Serial.println(output);
+
+  drivemotors(output); 
+
+  error = prevError; 
 }
 
-void calibrateADXL345() {
+void calibrate() {
   float sumX = 0, sumY = 0, sumZ = 0;
   int numSamples = 100;
   
@@ -128,29 +104,12 @@ void calibrateADXL345() {
   offsetZ = sumZ / numSamples - 9.8; // Subtract 1g from Z-axis
 }
 
-void driveMotors(float output) {
-  //int baseSpeed = 90; // Center point for servos
-  //int motorSpeed = constrain(baseSpeed + output, 0, 180);
+void drivemotors(float output) {
+  int servoValue; 
 
-  int servoValue = constrain(output, -90, 90);
+  servoValue = constrain(output, -90, 90); 
 
-  leftwheel.write(90 + servoValue); 
-  rightwheel.write(90 - servoValue);
+  leftwheel.write(90 + servoValue);
+  rightwheel.write(90 - servoValue); 
 
-  Serial.print("Left Motor: "); Serial.print(90 + servoValue); 
-  Serial.print(", Right Motor: "); Serial.println(90 - servoValue); 
-
-  /*if (output >= 0) {
-    Serial.print(" Forward: ");
-    Serial.println(motorSpeed);
-    // Forward
-    analogWrite(leftMotor, motorSpeed);
-    //analogWrite(rightMotor, 255 - motorSpeed);
-  } else {
-    
-    Serial.print(" Backward: ");
-    Serial.println(motorSpeed);
-    // Backward
-    //analogWrite(leftMotor, 255 - motorSpeed);
-    //analogWrite(rightMotor, motorSpeed);*/
-  }
+}
