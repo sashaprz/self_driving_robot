@@ -7,14 +7,14 @@ Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Servo leftwheel, rightwheel;
 
 // PID constants for angle control
-float Kp_angle = 1.0;
+float Kp_angle = 0.82;
 float Ki_angle = 0.0;
-float Kd_angle = 0.0;
+float Kd_angle = 0.61;
 
 // PID constants for speed control
-float Kp_speed = 0.5;
-float Ki_speed = 0.1;
-float Kd_speed = 0.1;
+float Kp_speed = 1.0;
+float Ki_speed = 0.0;
+float Kd_speed = 1.0;
 
 // Variables for angle PID
 float angle_error = 0, angle_previous_error = 0, angle_integral = 0;
@@ -89,9 +89,6 @@ void loop() {
   float angle_derivative = angle_error - angle_previous_error;
   float angle_output = Kp_angle * angle_error + Ki_angle * angle_integral + Kd_angle * angle_derivative;
   angle_previous_error = angle_error;
-
-  Serial.print("angle output: "); 
-  Serial.print(angle_output); 
   
   // Combine outputs
   float left_output = angle_output;
@@ -99,13 +96,6 @@ void loop() {
   
   // Drive motors
   driveMotors(left_output, right_output);
-  
-  // Debug output
-  Serial.print("Angle: "); Serial.print(tilt_angle);
-  Serial.print(" Target Angle: "); Serial.print(target_angle);
-  Serial.print(" Speed: "); Serial.print(current_speed);
-  Serial.print(" Left: "); Serial.print(left_output);
-  Serial.print(" Right: "); Serial.println(right_output);
 }
 
 void driveMotors(float left_output, float right_output) {
